@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 
 module Update where
 
@@ -5,7 +6,16 @@ import Miso
 
 import Model
 
-data Action = Action
+-------------------------------------------------------------------------------
+-- Action
+-------------------------------------------------------------------------------
+
+data Action 
+  = ActionReset
+
+-------------------------------------------------------------------------------
+-- update
+-------------------------------------------------------------------------------
 
 updateModel :: Action -> Effect Model Action
-updateModel _ = pure ()
+updateModel ActionReset = io_ (consoleLog "TODO reset")
