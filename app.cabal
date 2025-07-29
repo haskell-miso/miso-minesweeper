@@ -31,7 +31,7 @@ executable app
   other-modules:
     Game Model Update View
   build-depends:
-    base, miso, massiv, mtl
+    base, miso, massiv, mtl, random
   default-language:
     GHC2021
   default-extensions:
