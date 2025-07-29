@@ -1,9 +1,9 @@
 
-{-# LANGUAGE CPP #-}
-
+import Control.Monad.IO.Class (liftIO)
 import Miso
+import System.Random (getStdGen)
 
-import Game
+-- import Game
 import Model
 import Update
 import View
@@ -21,11 +21,12 @@ test = do
 
 main :: IO ()
 main = run $ do
-  let model = Model
-      app = component model updateModel viewModel
-  startComponent app
-    { logLevel = DebugAll
-    }
+  gen0 <- getStdGen
+  model <- liftIO $ mkModel gen0
+  startComponent 
+    (component model updateModel viewModel) 
+      { logLevel = DebugAll
+      }
 
 #ifdef WASM
 foreign export javascript "hs_start" main :: IO ()

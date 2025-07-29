@@ -3,10 +3,14 @@ module Game
   ( boardNi
   , boardNj
   , Game(..)
+  , mkGame
+  , getMines
   ) where
 
 import Data.Massiv.Array as A
-import System.Random.Stateful
+import Miso.Lens
+import Miso.Lens.TH
+import System.Random.Stateful (uniformRM, StatefulGen)
 
 -------------------------------------------------------------------------------
 -- params
@@ -48,7 +52,19 @@ mkMines gen = do
 -------------------------------------------------------------------------------
 
 data Game = Game
-  { gFlags :: BitMap
-  , gMines :: BitMap
-  }
+  { _gMines :: BitMap
+  -- , _gFlags :: BitMap
+  } deriving (Eq)
+
+makeLenses ''Game
+
+mkGame :: (StatefulGen g m, PrimMonad m) => g -> m Game
+mkGame gen = Game <$> mkMines gen
+
+getMines :: Game -> [(Int, Int)]
+getMines game = ifoldMono f (game ^. gMines)
+  where 
+    f (Ix2 i j) = \case
+      True -> [(i, j)]
+      False -> []
 

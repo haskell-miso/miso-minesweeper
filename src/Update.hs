@@ -1,7 +1,7 @@
-{-# LANGUAGE OverloadedStrings #-}
 
 module Update where
 
+import Control.Monad.IO.Class (liftIO)
 import Miso
 
 import Model
@@ -11,11 +11,19 @@ import Model
 -------------------------------------------------------------------------------
 
 data Action 
-  = ActionReset
+  = ActionAskReset
+  | ActionReset Model
 
 -------------------------------------------------------------------------------
 -- update
 -------------------------------------------------------------------------------
 
 updateModel :: Action -> Effect Model Action
-updateModel ActionReset = io_ (consoleLog "TODO reset")
+
+updateModel ActionAskReset = do
+  model <- get
+  io (ActionReset <$> liftIO (resetModel model))
+
+updateModel (ActionReset model) = 
+  put model
+

@@ -31,9 +31,9 @@ executable app
   other-modules:
     Game Model Update View
   build-depends:
-    base, miso, massiv, mtl, random
+    base, massiv, miso, mtl, primitive, random, transformers
   default-language:
     GHC2021
   default-extensions:
-    CPP TemplateHaskell
+    CPP LambdaCase TemplateHaskell
  

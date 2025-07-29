@@ -5,6 +5,7 @@ module View where
 import Control.Monad (forM_)
 import Miso
 import Miso.Canvas as Canvas
+import Miso.Lens
 import Miso.String (ms)
 import Miso.Style qualified as Style
 
@@ -22,7 +23,8 @@ cellSize = 30
 canvasWidth = boardNj * cellSize
 canvasHeight = boardNi * cellSize
 
-canvasWidthD, canvasHeightD :: Double
+cellSizeD, canvasWidthD, canvasHeightD :: Double
+cellSizeD = fromIntegral cellSize
 canvasWidthD = fromIntegral canvasWidth
 canvasHeightD = fromIntegral canvasHeight
 
@@ -36,14 +38,14 @@ viewModel model = div_ []
   , Canvas.canvas 
       [ width_ (ms canvasWidth)
       , height_ (ms canvasHeight)
-      , Style.style_  [Style.border "1px solid black"]
+      , Style.style_  [Style.border "2px solid black"]
       ]
     initCanvas
     (drawCanvas model)
   , p_ [] [ "remaining mines: " ]
   , p_ [] 
       [ button_ 
-        [ onClick ActionReset ]
+        [ onClick ActionAskReset ]
         [ text "reset" ]
       ]
   ]
@@ -56,15 +58,19 @@ initCanvas :: DOMRef -> Canvas ()
 initCanvas _ = pure ()
 
 drawCanvas :: Model -> () -> Canvas ()
-drawCanvas _ () = do
-  -- clear
+drawCanvas model () = do
   clearRect (0, 0, canvasWidthD, canvasHeightD)
 
-  -- draw background
-  fillStyle (color $ Style.Hex "DDDDDD")
-  fillRect (0, 0, canvasWidthD, canvasHeightD)
+  drawBackground
 
-  -- draw grid
+  forM_ (model ^. mGame & getMines) drawMine
+
+  -- drawMine 10 20
+
+  drawGrid
+
+drawGrid :: Canvas ()
+drawGrid = do
   fillStyle (color Style.black)
   forM_ [1 .. boardNj-1] $ \j -> do
     let x = fromIntegral (j * cellSize)
@@ -76,5 +82,15 @@ drawCanvas _ () = do
     lineTo (canvasWidthD, y)
   stroke ()
 
+drawBackground :: Canvas ()
+drawBackground = do
+  fillStyle (color $ Style.Hex "DDDDDD")
+  fillRect (0, 0, canvasWidthD, canvasHeightD)
 
+drawMine :: (Int, Int) -> Canvas ()
+drawMine (i, j) = do
+  let x0 = fromIntegral (j*cellSize)
+      y0 = fromIntegral (i*cellSize)
+  fillStyle (color $ Style.Hex "BBBBBB")
+  fillRect (x0, y0, cellSizeD, cellSizeD)
  
