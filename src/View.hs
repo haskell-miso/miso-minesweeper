@@ -17,14 +17,19 @@ import Update
 -- params
 -------------------------------------------------------------------------------
 
-
-cellSize, canvasWidth, canvasHeight :: Int
+cellSize :: Int
 cellSize = 30
+
+mineSizeD :: Double
+mineSizeD = 9
+
+canvasWidth, canvasHeight :: Int
 canvasWidth = boardNj * cellSize
 canvasHeight = boardNi * cellSize
 
-cellSizeD, canvasWidthD, canvasHeightD :: Double
+cellSizeD, cellSize05D, canvasWidthD, canvasHeightD :: Double
 cellSizeD = fromIntegral cellSize
+cellSize05D = cellSizeD * 0.5
 canvasWidthD = fromIntegral canvasWidth
 canvasHeightD = fromIntegral canvasHeight
 
@@ -89,8 +94,40 @@ drawBackground = do
 
 drawMine :: (Int, Int) -> Canvas ()
 drawMine (i, j) = do
+
+  save ()
+
   let x0 = fromIntegral (j*cellSize)
       y0 = fromIntegral (i*cellSize)
+  translate (x0, y0)
+
   fillStyle (color $ Style.Hex "BBBBBB")
-  fillRect (x0, y0, cellSizeD, cellSizeD)
+  fillRect (0, 0, cellSizeD, cellSizeD)
+
+  let cs02 = cellSizeD * 0.2
+      cs08 = cellSizeD * 0.8
+      cs01 = cellSizeD * 0.1
+      cs09 = cellSizeD * 0.9
+  beginPath ()
+  moveTo (cs02, cs02)
+  lineTo (cs08, cs08)
+  moveTo (cs02, cs08)
+  lineTo (cs08, cs02)
+  moveTo (cellSize05D, cs01)
+  lineTo (cellSize05D, cs09)
+  moveTo (cs01, cellSize05D)
+  lineTo (cs09, cellSize05D)
+  stroke ()
+
+  fillStyle (color Style.black)
+  beginPath ()
+  arc (cellSize05D, cellSize05D, mineSizeD, 0, 2*pi)
+  fill ()
+
+  fillStyle (color Style.white)
+  beginPath ()
+  arc (cellSizeD*0.4, cellSizeD*0.4, 2, 0, 2*pi)
+  fill ()
+
+  restore ()
  

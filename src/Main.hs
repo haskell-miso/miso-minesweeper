@@ -3,21 +3,9 @@ import Control.Monad.IO.Class (liftIO)
 import Miso
 import System.Random (getStdGen)
 
--- import Game
 import Model
 import Update
 import View
-
-{-
-import System.Random
-import System.Random.Stateful
-
-test :: IO ()
-test = do
-  gen <- getStdGen
-  b <- runStateGenT_ gen mkMines
-  print b
--}
 
 main :: IO ()
 main = run $ do
@@ -31,5 +19,4 @@ main = run $ do
 #ifdef WASM
 foreign export javascript "hs_start" main :: IO ()
 #endif
-
 
