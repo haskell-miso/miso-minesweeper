@@ -6,7 +6,7 @@ import Control.Monad (forM_)
 import Miso
 import Miso.Canvas as Canvas
 import Miso.Lens
-import Miso.String (ms)
+import Miso.String (MisoString, ms)
 import Miso.Style qualified as Style
 
 import Game
@@ -19,6 +19,9 @@ import Update
 
 cellSize :: Int
 cellSize = 30
+
+cellFont :: MisoString
+cellFont = "small-caps bold 25px arial"
 
 canvasWidth, canvasHeight :: Int
 canvasWidth = boardNj * cellSize
@@ -82,9 +85,7 @@ drawCanvas model () = do
   clearRect (0, 0, canvasWidthD, canvasHeightD)
   drawBackground
   forGame (model ^. mGame) drawGameCell
-  drawFlag 1 2    -- TODO
   drawFlag 2 1    -- TODO
-  drawFlag 1 1    -- TODO
   drawGrid
 
 -------------------------------------------------------------------------------
@@ -114,11 +115,7 @@ drawMine :: Int -> Int -> Canvas ()
 drawMine i j = do
 
   save ()
-
-  let x0 = fromIntegral (j*cellSize)
-      y0 = fromIntegral (i*cellSize)
-
-  translate (x0, y0)
+  translate $ ij2xy i j
 
   fillStyle (color $ Style.Hex "BBBBBB")
   fillRect (0, 0, cellSizeD, cellSizeD)
@@ -148,12 +145,9 @@ drawMine i j = do
 
 drawFlag :: Int -> Int -> Canvas ()
 drawFlag i j = do
+
   save ()
-
-  let x0 = fromIntegral (j*cellSize)
-      y0 = fromIntegral (i*cellSize)
-
-  translate (x0, y0)
+  translate $ ij2xy i j
 
   fillStyle (color Style.red)
   beginPath ()
@@ -169,8 +163,32 @@ drawFlag i j = do
 
   restore ()
 
+drawFree :: Int -> Int -> Int -> Canvas ()
+drawFree _ _ 0 = pure ()
+drawFree i j n = do
+  save ()
+  translate $ ij2xy i j
+  fillStyle (color $ n2color n)
+  font cellFont
+  fillText (ms (show n), cs02, cs08)
+  restore ()
+
 drawGameCell :: Int -> Int -> Cell -> Canvas ()   -- TODO
 drawGameCell i j = \case
   CellMine -> drawMine i j
+  CellFree n -> drawFree i j n
   _ -> pure ()
- 
+
+
+ij2xy :: Int -> Int -> (Double, Double)
+ij2xy i j = (fromIntegral (j*cellSize), fromIntegral (i*cellSize))
+
+n2color :: Int -> Style.Color
+n2color = \case
+  1 -> Style.Hex "0000FF"
+  2 -> Style.Hex "007B00"
+  3 -> Style.Hex "FF0000"
+  4 -> Style.Hex "00007B"
+  5 -> Style.Hex "7B0000"
+  _ -> Style.black
+

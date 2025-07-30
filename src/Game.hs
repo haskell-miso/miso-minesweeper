@@ -11,6 +11,7 @@ module Game
   , mkGame
   ) where
 
+import Data.Bool (bool)
 import Data.Massiv.Array as A
 import Miso.Lens
 import Miso.Lens.TH
@@ -74,7 +75,7 @@ data Move
 
 data Game = Game
   { _gMines       :: Array U Ix2 Bool
-  , _gNeighbors   :: Array U Ix2 Int
+  , _gNeighbors   :: Array P Ix2 Int
   , _gCells       :: Array D Ix2 Cell
   , _gStatus      :: Status
   , _gRemaining   :: Int
@@ -85,11 +86,21 @@ makeLenses ''Game
 mkGame :: (StatefulGen g m, PrimMonad m) => g -> m Game
 mkGame gen = do
   mines <- mkMines gen
-  let neighbors = A.replicate (ParOn []) boardSize 0   -- TODO
-  let cells = A.replicate (ParOn []) boardSize CellUnknown
-  let game = Game mines neighbors cells StatusRunning nbMines
-  let game' = game & gCells .~ updateCellsLost game   -- TODO
+  let neighbors = computeNeighbors mines
+      cells = A.replicate (ParOn []) boardSize CellUnknown
+      game = Game mines neighbors cells StatusRunning nbMines
+      game' = game & gCells .~ updateCellsLost game   -- TODO
   pure game'
+
+computeNeighbors :: Array U Ix2 Bool -> Array P Ix2 Int
+computeNeighbors mines = 
+  let 
+    f = bool 0 1
+    count3x3Stencil = makeStencil (Sz (3 :. 3)) (1 :. 1) $ \w ->
+      f(w (-1 :. -1)) + f(w (-1 :. 0)) + f(w (-1 :. 1)) +
+      f(w ( 0 :. -1)) +                  f(w ( 0 :. 1)) +
+      f(w ( 1 :. -1)) + f(w ( 1 :. 0)) + f(w ( 1 :. 1)) 
+  in compute $ mapStencil (Fill False) count3x3Stencil mines
 
 play :: PrimMonad m => Move -> Game -> m Game
 play _ = pure -- TODO
@@ -98,7 +109,9 @@ forGame :: (Monad m) => Game -> (Int -> Int -> Cell -> m ()) -> m ()
 forGame game f = A.iforM_ (game ^. gCells) $ \(Ix2 i j) c -> f i j c
 
 updateCellsLost :: Game -> Array D Ix2 Cell   -- TODO
-updateCellsLost game = A.map f (game ^. gMines)
+updateCellsLost game = A.zipWith f (game ^. gMines) (game ^. gNeighbors)
   where
-    f mine = if mine then CellMine else CellUnknown
+    f mine cell = case (mine, cell) of
+      (True, _) -> CellMine
+      (_, x) -> CellFree x
 
