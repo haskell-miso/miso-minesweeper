@@ -47,6 +47,8 @@ viewModel model = div_ []
       ]
     initCanvas
     (drawCanvas model)
+  , p_ [] [ "left-click to discover, middle-click to flag/unflag" ]
+  , p_ [] [ text ("status: " <> fmtStatus (model ^. mGame ^. gStatus)) ]
   , p_ [] [ "remaining mines: " ]
   , p_ [] 
       [ button_ 
@@ -54,6 +56,11 @@ viewModel model = div_ []
         [ text "reset" ]
       ]
   ]
+  where
+    fmtStatus = \case
+      StatusRunning   -> "running"
+      StatusWon       -> "won"
+      StatusLost      -> "lost"
 
 -------------------------------------------------------------------------------
 -- canvas
@@ -65,14 +72,13 @@ initCanvas _ = pure ()
 drawCanvas :: Model -> () -> Canvas ()
 drawCanvas model () = do
   clearRect (0, 0, canvasWidthD, canvasHeightD)
-
   drawBackground
-
-  forM_ (model ^. mGame & getMines) drawMine
-
-  -- drawMine 10 20
-
+  forGame (model ^. mGame) drawCell
   drawGrid
+
+-------------------------------------------------------------------------------
+-- drawing functions
+-------------------------------------------------------------------------------
 
 drawGrid :: Canvas ()
 drawGrid = do
@@ -92,8 +98,13 @@ drawBackground = do
   fillStyle (color $ Style.Hex "DDDDDD")
   fillRect (0, 0, canvasWidthD, canvasHeightD)
 
-drawMine :: (Int, Int) -> Canvas ()
-drawMine (i, j) = do
+drawCell :: Int -> Int -> Cell -> Canvas ()
+drawCell i j = \case
+  CellMine -> drawMine i j
+  _ -> pure ()
+
+drawMine :: Int -> Int -> Canvas ()
+drawMine i j = do
 
   save ()
 
