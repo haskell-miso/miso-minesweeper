@@ -1,7 +1,9 @@
+{-# LANGUAGE TypeApplications #-}
 
 module Game
   ( Cell(..)
   , Game
+  , Move(..)
   , Status(..)
   , boardNi
   , boardNj
@@ -9,6 +11,7 @@ module Game
   , gRemaining
   , gStatus
   , mkGame
+  , play
   ) where
 
 import Data.Bool (bool)
@@ -32,26 +35,7 @@ nbMines :: Int
 nbMines = 99
 
 -------------------------------------------------------------------------------
--- BitMap
--------------------------------------------------------------------------------
-
--- create random mines, using rejection sampling
-mkMines :: (StatefulGen g m, PrimMonad m) => g -> m (Array U Ix2 Bool)
-mkMines gen = do
-  arr <- newMArray boardSize False
-  let go 0 = pure ()
-      go n = do
-        ij <- Ix2 <$> uniformRM (0, boardNi-1) gen 
-                  <*> uniformRM (0, boardNj-1) gen
-        c <- A.read arr ij
-        case c of
-          Just False -> write_ arr ij True >> go (n-1)
-          _ -> go n
-  go nbMines
-  freezeS arr
-
--------------------------------------------------------------------------------
--- Game
+-- types
 -------------------------------------------------------------------------------
 
 data Status
@@ -70,18 +54,22 @@ data Cell
   deriving (Eq)
 
 data Move
-  = MoveDiscover Int Int
+  = MoveFree Int Int
   | MoveFlag Int Int
 
 data Game = Game
   { _gMines       :: Array U Ix2 Bool
   , _gNeighbors   :: Array P Ix2 Int
-  , _gCells       :: Array D Ix2 Cell
+  , _gCells       :: Array B Ix2 Cell
   , _gStatus      :: Status
   , _gRemaining   :: Int
   } deriving (Eq)
 
 makeLenses ''Game
+
+-------------------------------------------------------------------------------
+-- export
+-------------------------------------------------------------------------------
 
 mkGame :: (StatefulGen g m, PrimMonad m) => g -> m Game
 mkGame gen = do
@@ -89,8 +77,49 @@ mkGame gen = do
   let neighbors = computeNeighbors mines
       cells = A.replicate (ParOn []) boardSize CellUnknown
       game = Game mines neighbors cells StatusRunning nbMines
-      game' = game & gCells .~ updateCellsLost game   -- TODO
-  pure game'
+  pure game
+
+forGame :: (Monad m) => Game -> (Int -> Int -> Cell -> m ()) -> m ()
+forGame game f = A.iforM_ (game ^. gCells) $ \(Ix2 i j) c -> f i j c
+
+play :: PrimMonad m => Move -> Game -> m Game
+play (MoveFlag i j) game = 
+  pure game    -- TODO
+play (MoveFree i j) game = 
+  if isValidIJ i j && game ^. gStatus == StatusRunning
+    then do
+      let ij = Ix2 i j
+          m = game ^. gMines ! ij
+          n = game ^. gNeighbors ! ij
+      cells0 <- thawS @B @Ix2 @Cell (game ^. gCells)
+      if m
+        then write_ cells0 (Ix2 i j) CellMine
+        else write_ cells0 (Ix2 i j) (CellFree n)
+      cells1 <- freezeS cells0
+      pure (game & gCells .~ cells1)
+    else pure game
+
+-------------------------------------------------------------------------------
+-- internal
+-------------------------------------------------------------------------------
+
+isValidIJ :: Int -> Int -> Bool
+isValidIJ i j = i>=0 && i<boardNi && j>=0 && j<boardNj
+
+-- create random mines, using rejection sampling
+mkMines :: (StatefulGen g m, PrimMonad m) => g -> m (Array U Ix2 Bool)
+mkMines gen = do
+  arr <- newMArray boardSize False
+  let go 0 = pure ()
+      go n = do
+        ij <- Ix2 <$> uniformRM (0, boardNi-1) gen 
+                  <*> uniformRM (0, boardNj-1) gen
+        c <- A.read arr ij
+        case c of
+          Just False -> write_ arr ij True >> go (n-1)
+          _ -> go n
+  go nbMines
+  freezeS arr
 
 computeNeighbors :: Array U Ix2 Bool -> Array P Ix2 Int
 computeNeighbors mines = 
@@ -101,12 +130,6 @@ computeNeighbors mines =
       f(w ( 0 :. -1)) +                  f(w ( 0 :. 1)) +
       f(w ( 1 :. -1)) + f(w ( 1 :. 0)) + f(w ( 1 :. 1)) 
   in compute $ mapStencil (Fill False) count3x3Stencil mines
-
-play :: PrimMonad m => Move -> Game -> m Game
-play _ = pure -- TODO
-
-forGame :: (Monad m) => Game -> (Int -> Int -> Cell -> m ()) -> m ()
-forGame game f = A.iforM_ (game ^. gCells) $ \(Ix2 i j) c -> f i j c
 
 updateCellsLost :: Game -> Array D Ix2 Cell   -- TODO
 updateCellsLost game = A.zipWith f (game ^. gMines) (game ^. gNeighbors)

@@ -23,6 +23,3 @@ mkModel gen0 = do
 resetModel :: (PrimMonad m) => Model -> m Model
 resetModel model = mkModel (model ^. mGen)
 
--- playDiscover
--- playFlag
-

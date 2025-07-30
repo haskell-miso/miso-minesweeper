@@ -4,7 +4,11 @@ module Update where
 
 import Control.Monad.IO.Class (liftIO)
 import Miso
+import Miso.Lens
+import Miso.String
 
+import Game
+import Helpers
 import Model
 
 -------------------------------------------------------------------------------
@@ -13,8 +17,9 @@ import Model
 
 data Action 
   = ActionAskReset
-  | ActionReset Model
-  | ActionAskUp
+  | ActionAskPlay PointerEvent
+  | ActionSetModel Model
+  | ActionSetGame Game
 
 -------------------------------------------------------------------------------
 -- update
@@ -24,11 +29,18 @@ updateModel :: Action -> Effect Model Action
 
 updateModel ActionAskReset = do
   model <- get
-  io (ActionReset <$> liftIO (resetModel model))
+  io (ActionSetModel <$> liftIO (resetModel model))
 
-updateModel (ActionReset model) = 
+updateModel (ActionSetModel model) = 
   put model
 
-updateModel ActionAskUp = 
-  io_ (consoleLog "TODO button up")
+updateModel (ActionSetGame game) = 
+  mGame .= game
+
+updateModel (ActionAskPlay pointer) = do
+  let (i, j) = uncurry xy2ij $ client pointer
+      move = MoveFree i j   -- TODO
+  game <- use mGame
+  io_ (consoleLog ("playFree " <> ms (show i) <> " " <> ms (show j)))
+  io (ActionSetGame <$> liftIO (play move game))
 

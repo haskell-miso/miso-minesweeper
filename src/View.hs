@@ -2,26 +2,21 @@
 
 module View where
 
-import Control.Monad (forM_)
+import Control.Monad (forM_, when)
 import Miso
 import Miso.Canvas as Canvas
 import Miso.Lens
-import Miso.String (MisoString, ms)
+import Miso.String (ms)
 import Miso.Style qualified as Style
 
 import Game
+import Helpers
 import Model
 import Update
 
 -------------------------------------------------------------------------------
 -- params
 -------------------------------------------------------------------------------
-
-cellSize :: Int
-cellSize = 30
-
-cellFont :: MisoString
-cellFont = "small-caps bold 25px arial"
 
 canvasWidth, canvasHeight :: Int
 canvasWidth = boardNj * cellSize
@@ -55,7 +50,7 @@ viewModel model = div_ []
       [ width_ (ms canvasWidth)
       , height_ (ms canvasHeight)
       , Style.style_  [Style.border "2px solid black"]
-      , onMouseUp ActionAskUp
+      , onPointerUp ActionAskPlay
       ]
     initCanvas
     (drawCanvas model)
@@ -84,9 +79,9 @@ initCanvas _ = pure ()
 drawCanvas :: Model -> () -> Canvas ()
 drawCanvas model () = do
   clearRect (0, 0, canvasWidthD, canvasHeightD)
+  font cellFont
   drawBackground
   forGame (model ^. mGame) drawGameCell
-  drawFlag 2 1    -- TODO
   drawGrid
 
 -------------------------------------------------------------------------------
@@ -109,17 +104,21 @@ drawGrid = do
 
 drawBackground :: Canvas ()
 drawBackground = do
-  fillStyle (color $ Style.Hex "DDDDDD")
+  fillStyle (color colorNo)
   fillRect (0, 0, canvasWidthD, canvasHeightD)
 
-drawMine :: Int -> Int -> Canvas ()
-drawMine i j = do
+drawCell :: Style.Color -> Canvas ()
+drawCell c = do
+  fillStyle (color c)
+  fillRect (0, 0, cellSizeD, cellSizeD)
+
+drawMine :: Bool -> Int -> Int -> Canvas ()
+drawMine wrong i j = do
 
   save ()
   translate $ ij2xy i j
 
-  fillStyle (color $ Style.Hex "BBBBBB")
-  fillRect (0, 0, cellSizeD, cellSizeD)
+  when wrong $ drawCell colorWrongMine
 
   beginPath ()
   moveTo (cs02, cs02)
@@ -144,11 +143,13 @@ drawMine i j = do
 
   restore ()
 
-drawFlag :: Int -> Int -> Canvas ()
-drawFlag i j = do
+drawFlag :: Bool -> Int -> Int -> Canvas ()
+drawFlag wrong i j = do
 
   save ()
   translate $ ij2xy i j
+
+  when wrong $ drawCell colorWrongFlag
 
   fillStyle (color Style.red)
   beginPath ()
@@ -159,37 +160,25 @@ drawFlag i j = do
   fill ()
 
   fillStyle (color Style.black)
-  fillRect (cs06, cs01, cs01, cs08)
-  fillRect (cs04, cs08, cs05, cs01)
+  fillRect (cs06, cs02, cs01, cs06)
 
   restore ()
 
 drawFree :: Int -> Int -> Int -> Canvas ()
-drawFree _ _ 0 = pure ()
 drawFree i j n = do
   save ()
   translate $ ij2xy i j
+  drawCell colorYes
   fillStyle (color $ n2color n)
-  font cellFont
-  fillText (ms (show n), cs02, cs08)
+  when (n > 0) $ fillText (ms (show n), cs03, cs08)
   restore ()
 
-drawGameCell :: Int -> Int -> Cell -> Canvas ()   -- TODO
+drawGameCell :: Int -> Int -> Cell -> Canvas ()
 drawGameCell i j = \case
-  CellMine -> drawMine i j
-  CellFree n -> drawFree i j n
-  _ -> pure ()
-
-
-ij2xy :: Int -> Int -> (Double, Double)
-ij2xy i j = (fromIntegral (j*cellSize), fromIntegral (i*cellSize))
-
-n2color :: Int -> Style.Color
-n2color = \case
-  1 -> Style.Hex "0000FF"
-  2 -> Style.Hex "007B00"
-  3 -> Style.Hex "FF0000"
-  4 -> Style.Hex "00007B"
-  5 -> Style.Hex "7B0000"
-  _ -> Style.black
+  CellUnknown -> pure ()
+  CellFree n  -> drawFree i j n
+  CellFlag    -> drawFlag False i j
+  CellFlagKo  -> drawFlag True i j
+  CellMine    -> drawMine False i j
+  CellMineKo  -> drawMine True i j
 

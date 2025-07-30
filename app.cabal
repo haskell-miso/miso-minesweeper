@@ -29,7 +29,7 @@ executable app
   main-is:
     Main.hs
   other-modules:
-    Game Model Update View
+    Game Helpers Model Update View
   build-depends:
     base, massiv, miso, mtl, primitive, random, transformers
   default-language:

@@ -7,13 +7,17 @@ import Model
 import Update
 import View
 
+import Miso.Lens
+import Game
+
 main :: IO ()
 main = run $ do
   gen0 <- getStdGen
-  model <- liftIO $ mkModel gen0
+  model <- liftIO (mkModel gen0)
+  let model = model0 & mGame .~ g
   startComponent 
     (component model updateModel viewModel) 
-      { events = defaultEvents <> mouseEvents
+      { events = defaultEvents <> pointerEvents   -- TODO mouseEvents
       , logLevel = DebugAll
       }
 
