@@ -6,6 +6,7 @@ module Game
   , boardNi
   , boardNj
   , forGame
+  , gRemaining
   , gStatus
   , mkGame
   ) where
@@ -67,11 +68,16 @@ data Cell
   | CellMineKo
   deriving (Eq)
 
+data Move
+  = MoveDiscover Int Int
+  | MoveFlag Int Int
+
 data Game = Game
   { _gMines       :: Array U Ix2 Bool
   , _gNeighbors   :: Array U Ix2 Int
   , _gCells       :: Array D Ix2 Cell
   , _gStatus      :: Status
+  , _gRemaining   :: Int
   } deriving (Eq)
 
 makeLenses ''Game
@@ -81,18 +87,18 @@ mkGame gen = do
   mines <- mkMines gen
   let neighbors = A.replicate (ParOn []) boardSize 0   -- TODO
   let cells = A.replicate (ParOn []) boardSize CellUnknown
-  let game = Game mines neighbors cells StatusRunning
+  let game = Game mines neighbors cells StatusRunning nbMines
   let game' = game & gCells .~ updateCellsLost game   -- TODO
   pure game'
 
-play :: PrimMonad m => Int -> Int -> Game -> m Game
-play _ _ = pure -- TODO
+play :: PrimMonad m => Move -> Game -> m Game
+play _ = pure -- TODO
 
 forGame :: (Monad m) => Game -> (Int -> Int -> Cell -> m ()) -> m ()
 forGame game f = A.iforM_ (game ^. gCells) $ \(Ix2 i j) c -> f i j c
 
 updateCellsLost :: Game -> Array D Ix2 Cell   -- TODO
-updateCellsLost game = 
-  flip A.map (game ^. gMines) $ \mine ->
-    if mine then CellMine else CellUnknown
+updateCellsLost game = A.map f (game ^. gMines)
+  where
+    f mine = if mine then CellMine else CellUnknown
 

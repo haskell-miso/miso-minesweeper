@@ -20,18 +20,26 @@ import Update
 cellSize :: Int
 cellSize = 30
 
-mineSizeD :: Double
-mineSizeD = 9
-
 canvasWidth, canvasHeight :: Int
 canvasWidth = boardNj * cellSize
 canvasHeight = boardNi * cellSize
 
-cellSizeD, cellSize05D, canvasWidthD, canvasHeightD :: Double
+cellSizeD, canvasWidthD, canvasHeightD :: Double
 cellSizeD = fromIntegral cellSize
-cellSize05D = cellSizeD * 0.5
 canvasWidthD = fromIntegral canvasWidth
 canvasHeightD = fromIntegral canvasHeight
+
+cs007, cs01, cs02, cs03, cs04, cs05, cs06, cs07, cs08, cs09 :: Double
+cs007 = cellSizeD * 0.07
+cs01 = cellSizeD * 0.1
+cs02 = cellSizeD * 0.2
+cs03 = cellSizeD * 0.3
+cs04 = cellSizeD * 0.4
+cs05 = cellSizeD * 0.5
+cs06 = cellSizeD * 0.6
+cs07 = cellSizeD * 0.7
+cs08 = cellSizeD * 0.8
+cs09 = cellSizeD * 0.9
 
 -------------------------------------------------------------------------------
 -- view
@@ -49,7 +57,7 @@ viewModel model = div_ []
     (drawCanvas model)
   , p_ [] [ "left-click to discover, middle-click to flag/unflag" ]
   , p_ [] [ text ("status: " <> fmtStatus (model ^. mGame ^. gStatus)) ]
-  , p_ [] [ "remaining mines: " ]
+  , p_ [] [ text ("remaining: " <> (ms $ show $ model ^. mGame ^. gRemaining)) ]
   , p_ [] 
       [ button_ 
         [ onClick ActionAskReset ]
@@ -73,7 +81,10 @@ drawCanvas :: Model -> () -> Canvas ()
 drawCanvas model () = do
   clearRect (0, 0, canvasWidthD, canvasHeightD)
   drawBackground
-  forGame (model ^. mGame) drawCell
+  forGame (model ^. mGame) drawGameCell
+  drawFlag 1 2    -- TODO
+  drawFlag 2 1    -- TODO
+  drawFlag 1 1    -- TODO
   drawGrid
 
 -------------------------------------------------------------------------------
@@ -83,6 +94,7 @@ drawCanvas model () = do
 drawGrid :: Canvas ()
 drawGrid = do
   fillStyle (color Style.black)
+  beginPath ()
   forM_ [1 .. boardNj-1] $ \j -> do
     let x = fromIntegral (j * cellSize)
     moveTo (x, 0)
@@ -98,11 +110,6 @@ drawBackground = do
   fillStyle (color $ Style.Hex "DDDDDD")
   fillRect (0, 0, canvasWidthD, canvasHeightD)
 
-drawCell :: Int -> Int -> Cell -> Canvas ()
-drawCell i j = \case
-  CellMine -> drawMine i j
-  _ -> pure ()
-
 drawMine :: Int -> Int -> Canvas ()
 drawMine i j = do
 
@@ -110,35 +117,60 @@ drawMine i j = do
 
   let x0 = fromIntegral (j*cellSize)
       y0 = fromIntegral (i*cellSize)
+
   translate (x0, y0)
 
   fillStyle (color $ Style.Hex "BBBBBB")
   fillRect (0, 0, cellSizeD, cellSizeD)
 
-  let cs02 = cellSizeD * 0.2
-      cs08 = cellSizeD * 0.8
-      cs01 = cellSizeD * 0.1
-      cs09 = cellSizeD * 0.9
   beginPath ()
   moveTo (cs02, cs02)
   lineTo (cs08, cs08)
   moveTo (cs02, cs08)
   lineTo (cs08, cs02)
-  moveTo (cellSize05D, cs01)
-  lineTo (cellSize05D, cs09)
-  moveTo (cs01, cellSize05D)
-  lineTo (cs09, cellSize05D)
+  moveTo (cs05, cs01)
+  lineTo (cs05, cs09)
+  moveTo (cs01, cs05)
+  lineTo (cs09, cs05)
   stroke ()
 
   fillStyle (color Style.black)
   beginPath ()
-  arc (cellSize05D, cellSize05D, mineSizeD, 0, 2*pi)
+  arc (cs05, cs05, cs03, 0, 2*pi)
   fill ()
 
   fillStyle (color Style.white)
   beginPath ()
-  arc (cellSizeD*0.4, cellSizeD*0.4, 2, 0, 2*pi)
+  arc (cs04, cs04, cs007, 0, 2*pi)
   fill ()
 
   restore ()
+
+drawFlag :: Int -> Int -> Canvas ()
+drawFlag i j = do
+  save ()
+
+  let x0 = fromIntegral (j*cellSize)
+      y0 = fromIntegral (i*cellSize)
+
+  translate (x0, y0)
+
+  fillStyle (color Style.red)
+  beginPath ()
+  moveTo (cs02, cs04)
+  lineTo (cs06, cs02)
+  lineTo (cs06, cs06)
+  closePath ()
+  fill ()
+
+  fillStyle (color Style.black)
+  fillRect (cs06, cs01, cs01, cs08)
+  fillRect (cs04, cs08, cs05, cs01)
+
+  restore ()
+
+drawGameCell :: Int -> Int -> Cell -> Canvas ()   -- TODO
+drawGameCell i j = \case
+  CellMine -> drawMine i j
+  _ -> pure ()
  
