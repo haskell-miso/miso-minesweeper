@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 
 module Update where
 
@@ -13,6 +14,7 @@ import Model
 data Action 
   = ActionAskReset
   | ActionReset Model
+  | ActionAskUp
 
 -------------------------------------------------------------------------------
 -- update
@@ -26,4 +28,7 @@ updateModel ActionAskReset = do
 
 updateModel (ActionReset model) = 
   put model
+
+updateModel ActionAskUp = 
+  io_ (consoleLog "TODO button up")
 

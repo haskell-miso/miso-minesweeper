@@ -13,7 +13,8 @@ main = run $ do
   model <- liftIO $ mkModel gen0
   startComponent 
     (component model updateModel viewModel) 
-      { logLevel = DebugAll
+      { events = defaultEvents <> mouseEvents
+      , logLevel = DebugAll
       }
 
 #ifdef WASM
