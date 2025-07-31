@@ -30,9 +30,5 @@ ij2xy :: Int -> Int -> (Double, Double)
 ij2xy i j = (fromIntegral (j*cellSize), fromIntegral (i*cellSize))
 
 xy2ij :: Double -> Double -> (Int, Int)
--- xy2ij x y = (floor y `div` cellSize, floor x `div` cellSize)   -- TODO
-xy2ij x y = (floor y' `div` cellSize, floor x' `div` cellSize)
-  where
-    x' = x - fromIntegral cellSize * 0.5
-    y' = y - fromIntegral cellSize * 3.5
+xy2ij x y = (floor y `div` cellSize, floor x `div` cellSize)
 

@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
 
 module Game
   ( Cell(..)

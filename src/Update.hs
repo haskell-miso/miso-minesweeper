@@ -17,7 +17,7 @@ import Model
 
 data Action 
   = ActionAskReset
-  | ActionAskPlay MouseEvent
+  | ActionAskPlay PointerEvent
   | ActionSetModel Model
   | ActionSetGame Game
 
@@ -38,11 +38,9 @@ updateModel (ActionSetGame game) =
   mGame .= game
 
 updateModel (ActionAskPlay event) = do
-  let (i, j) = uncurry xy2ij $ mouseClient event 
+  let (i, j) = uncurry xy2ij $ offset event 
   game <- use mGame
-  -- io_ (consoleLog ("button: " <> ms (show $ mouseButton event)))
-  -- io_ (consoleLog ("buttons: " <> ms (show $ mouseButtons event)))
-  case mouseButton event of
+  case button event of
     0 -> do
       io_ (consoleLog ("playFree " <> ms (show i) <> " " <> ms (show j)))
       io (ActionSetGame <$> liftIO (play (MoveFree i j) game))

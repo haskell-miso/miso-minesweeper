@@ -33,7 +33,7 @@ executable app
   build-depends:
     base, massiv, miso, mtl, primitive, random
   default-language:
-    GHC2021
+    GHC2024
   default-extensions:
-    CPP LambdaCase TemplateHaskell
+    CPP TemplateHaskell
  
