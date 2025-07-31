@@ -19,6 +19,7 @@ module Game
 import Control.Monad (when)
 import Control.Monad.State
 import Data.Bool (bool)
+import Data.Set as S
 import Data.Massiv.Array as A
 import Miso.Lens
 import Miso.Lens.TH
@@ -28,19 +29,19 @@ import System.Random.Stateful (uniformRM, StatefulGen)
 -- params
 -------------------------------------------------------------------------------
 
+{-
 -- easy
 boardNi, boardNj, nbMines :: Int
 boardNi = 9
 boardNj = 9
 nbMines = 10
+-}
 
-{-
 -- hard
 boardNi, boardNj, nbMines :: Int
 boardNi = 16
 boardNj = 30
 nbMines = 99
--}
 
 boardSize :: Sz Ix2
 boardSize = Sz2 boardNi boardNj
@@ -103,8 +104,8 @@ play (MoveFree i j) = execStateT (playFree i j)
 -- internal
 -------------------------------------------------------------------------------
 
-isValidIJ :: Int -> Int -> Bool
-isValidIJ i j = i>=0 && i<boardNi && j>=0 && j<boardNj
+isValidIJ :: Ix2 -> Bool
+isValidIJ (Ix2 i j) = i>=0 && i<boardNi && j>=0 && j<boardNj
 
 -- create random mines, using rejection sampling
 mkMines :: (StatefulGen g m, PrimMonad m) => g -> m (Array U Ix2 Bool)
@@ -138,8 +139,8 @@ playFlag i j = pure ()
 playFree :: (MonadState Game m, PrimMonad m) => Int -> Int -> m ()
 playFree i j = do
   status <- use gStatus
-  when (status == StatusRunning && isValidIJ i j) $ do
-    let ij = Ix2 i j
+  let ij = Ix2 i j
+  when (status == StatusRunning && isValidIJ ij) $ do
     m <- (! ij) <$> use gMines 
     if m
       then playFreeKo ij
@@ -164,12 +165,7 @@ playFreeKo ij = do
 playFreeOk :: (MonadState Game m, PrimMonad m) => Ix2 -> m ()
 playFreeOk ij = do
   -- update cells
-  n <- (! ij) <$> use gNeighbors 
-  cells <- thawS @B @Ix2 @Cell =<< use gCells
-  write_ cells ij (CellFree n)
-  freezeS cells >>= assign gCells
-  gRemCells -= 1
-  -- TODO discover free cells 0
+  discoverCells ij
   -- check win
   rc <- use gRemCells
   when (rc == 0) $ do
@@ -177,4 +173,36 @@ playFreeOk ij = do
     gCells %= compute . A.map (\c -> if c == CellUnknown then CellFlag else c)
     -- update status
     gStatus .= StatusWon
+
+-- assumes ij0 is a free cell (no mine)
+discoverCells :: (MonadState Game m, PrimMonad m) => Ix2 -> m ()
+discoverCells ij0' = do
+  cells <- thawS @B @Ix2 @Cell =<< use gCells
+
+  let
+    go [] = pure ()
+    go (ij0:ijs) = do
+      mc0 <- A.read cells ij0
+      case mc0 of
+        Nothing -> go ijs
+        Just c0 -> 
+          if c0 /= CellUnknown
+            then go ijs
+            else do
+              -- unknown cell -> discover
+              n <- (! ij0) <$> use gNeighbors 
+              write_ cells ij0 (CellFree n)
+              gRemCells -= 1
+              if n > 0
+                then go ijs
+                else do
+                  -- no neighboring mine -> try neighboring cells
+                  let (Ix2 i0 j0) = ij0
+                      newIjs = [ ij | i<-[i0-1 .. i0+1], j<-[j0-1 .. j0+1]
+                               , let ij = Ix2 i j , ij/=ij0, isValidIJ ij ]
+                  go (newIjs ++ ijs)
+
+  go [ij0']
+
+  freezeS cells >>= assign gCells
 
