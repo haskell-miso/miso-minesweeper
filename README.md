@@ -1,4 +1,4 @@
-# :ramen: miso-minesweeper
+# :ramen: 💣 miso-minesweeper
 
 ## Build and run
 
