@@ -13,7 +13,7 @@ main = run $ do
   model <- liftIO (mkModel gen)
   startComponent 
     (component model updateModel viewModel) 
-      { events = defaultEvents <> pointerEvents   -- TODO mouseEvents
+      { events = defaultEvents <> mouseEvents
       , logLevel = DebugAll
       }
 

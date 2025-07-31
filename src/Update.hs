@@ -17,7 +17,7 @@ import Model
 
 data Action 
   = ActionAskReset
-  | ActionAskPlay PointerEvent
+  | ActionAskPlay MouseEvent
   | ActionSetModel Model
   | ActionSetGame Game
 
@@ -37,10 +37,17 @@ updateModel (ActionSetModel model) =
 updateModel (ActionSetGame game) = 
   mGame .= game
 
-updateModel (ActionAskPlay pointer) = do
-  let (i, j) = uncurry xy2ij $ client pointer
-      move = MoveFree i j   -- TODO
+updateModel (ActionAskPlay event) = do
+  let (i, j) = uncurry xy2ij $ mouseClient event 
   game <- use mGame
-  io_ (consoleLog ("playFree " <> ms (show i) <> " " <> ms (show j)))
-  io (ActionSetGame <$> liftIO (play move game))
+  -- io_ (consoleLog ("button: " <> ms (show $ mouseButton event)))
+  -- io_ (consoleLog ("buttons: " <> ms (show $ mouseButtons event)))
+  case mouseButton event of
+    0 -> do
+      io_ (consoleLog ("playFree " <> ms (show i) <> " " <> ms (show j)))
+      io (ActionSetGame <$> liftIO (play (MoveFree i j) game))
+    1 -> do
+      io_ (consoleLog ("playFlag " <> ms (show i) <> " " <> ms (show j)))
+      io (ActionSetGame <$> liftIO (play (MoveFlag i j) game))
+    _ -> pure ()
 

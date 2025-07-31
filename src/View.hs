@@ -50,7 +50,7 @@ viewModel model = div_ []
       [ width_ (ms canvasWidth)
       , height_ (ms canvasHeight)
       , Style.style_  [Style.border "2px solid black"]
-      , onPointerUp ActionAskPlay
+      , onMouseUp ActionAskPlay
       ]
     initCanvas
     (drawCanvas model)

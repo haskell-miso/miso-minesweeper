@@ -19,7 +19,6 @@ module Game
 import Control.Monad (when)
 import Control.Monad.State
 import Data.Bool (bool)
-import Data.Set as S
 import Data.Massiv.Array as A
 import Miso.Lens
 import Miso.Lens.TH
@@ -132,9 +131,20 @@ computeNeighbors mines =
       f(w ( 1 :. -1)) + f(w ( 1 :. 0)) + f(w ( 1 :. 1)) 
   in compute $ mapStencil (Fill False) count3x3Stencil mines
 
--- TODO implement playFlag
 playFlag :: (MonadState Game m, PrimMonad m) => Int -> Int -> m ()
-playFlag i j = pure ()
+playFlag i j = do
+  let ij = Ix2 i j
+  cells <- thawS @B @Ix2 @Cell =<< use gCells
+  c <- A.read cells ij
+  case c of
+    Just CellUnknown -> do
+      write_ cells ij CellFlag
+      gFlags += 1
+    Just CellFlag -> do
+      write_ cells ij CellUnknown
+      gFlags -= 1
+    _ -> pure ()
+  freezeS cells >>= assign gCells
 
 playFree :: (MonadState Game m, PrimMonad m) => Int -> Int -> m ()
 playFree i j = do
