@@ -5,7 +5,7 @@ module Update where
 import Control.Monad.IO.Class (liftIO)
 import Miso
 import Miso.Lens
-import Miso.String
+import Miso.String (ms)
 
 import Game
 import Helpers

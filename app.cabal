@@ -31,7 +31,7 @@ executable app
   other-modules:
     Game Helpers Model Update View
   build-depends:
-    base, massiv, miso, mtl, primitive, random, transformers
+    base, containers, massiv, miso, mtl, primitive, random, transformers
   default-language:
     GHC2021
   default-extensions:

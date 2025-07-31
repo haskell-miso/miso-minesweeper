@@ -21,5 +21,6 @@ mkModel gen0 = do
   pure (Model game gen)
 
 resetModel :: (PrimMonad m) => Model -> m Model
-resetModel model = mkModel (model ^. mGen)
+resetModel = mkModel . _mGen
+
 

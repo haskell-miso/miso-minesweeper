@@ -14,6 +14,8 @@ module Game
   , play
   ) where
 
+import Control.Monad (when)
+import Control.Monad.State
 import Data.Bool (bool)
 import Data.Massiv.Array as A
 import Miso.Lens
@@ -82,22 +84,9 @@ mkGame gen = do
 forGame :: (Monad m) => Game -> (Int -> Int -> Cell -> m ()) -> m ()
 forGame game f = A.iforM_ (game ^. gCells) $ \(Ix2 i j) c -> f i j c
 
-play :: PrimMonad m => Move -> Game -> m Game
-play (MoveFlag i j) game = 
-  pure game    -- TODO
-play (MoveFree i j) game = 
-  if isValidIJ i j && game ^. gStatus == StatusRunning
-    then do
-      let ij = Ix2 i j
-          m = game ^. gMines ! ij
-          n = game ^. gNeighbors ! ij
-      cells0 <- thawS @B @Ix2 @Cell (game ^. gCells)
-      if m
-        then write_ cells0 (Ix2 i j) CellMine
-        else write_ cells0 (Ix2 i j) (CellFree n)
-      cells1 <- freezeS cells0
-      pure (game & gCells .~ cells1)
-    else pure game
+play :: (PrimMonad m) => Move -> Game -> m Game
+play (MoveFlag i j) = execStateT (playFlag i j) 
+play (MoveFree i j) = execStateT (playFree i j) 
 
 -------------------------------------------------------------------------------
 -- internal
@@ -137,4 +126,23 @@ updateCellsLost game = A.zipWith f (game ^. gMines) (game ^. gNeighbors)
     f mine cell = case (mine, cell) of
       (True, _) -> CellMine
       (_, x) -> CellFree x
+
+playFlag :: (MonadState Game m, PrimMonad m) => Int -> Int -> m ()
+playFlag i j = pure ()    -- TODO
+
+playFree :: (MonadState Game m, PrimMonad m) => Int -> Int -> m ()
+playFree i j = do
+  status <- use gStatus
+  when (status == StatusRunning && isValidIJ i j) $ do
+    let ij = Ix2 i j
+    m <- (! ij) <$> use gMines 
+    n <- (! ij) <$> use gNeighbors 
+    cells0 <- use gCells
+    cells0M <- thawS @B @Ix2 @Cell cells0
+    if m
+      then do
+        write_ cells0M (Ix2 i j) CellMine
+        gStatus .= StatusLost
+      else write_ cells0M (Ix2 i j) (CellFree n)
+    freezeS cells0M >>= assign gCells
 
