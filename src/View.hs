@@ -45,6 +45,7 @@ viewModel model = div_ []
       , button_ [ onClick (ActionAskReset ModeIntermediate) ] [ "intermediate" ]
       , button_ [ onClick (ActionAskReset ModeExpert) ]       [ "expert" ]
       ]
+  , p_ [] [ "left-click to discover, middle-click to flag/unflag" ]
   , Canvas.canvas 
       [ width_ (ms $ nj * cellSize)
       , height_ (ms $ ni * cellSize)
@@ -53,7 +54,6 @@ viewModel model = div_ []
       ]
     initCanvas
     (drawCanvas model)
-  , p_ [] [ "left-click to discover, middle-click to flag/unflag" ]
   , p_ [] 
         [ text ("status: " <> fmtStatus (model ^. mGame ^. gStatus))
         , br_ []
