@@ -4,14 +4,13 @@ module Game
   , Game
   , Move(..)
   , Status(..)
-  , boardNi
-  , boardNj
   , forGame
+  , gBoardNiNj
   , gFlags
+  , gNbMines
   , gRemCells
   , gStatus
   , mkGame
-  , nbMines
   , play
   ) where
 
@@ -22,27 +21,6 @@ import Data.Massiv.Array as A
 import Miso.Lens
 import Miso.Lens.TH
 import System.Random.Stateful (uniformRM, StatefulGen)
-
--------------------------------------------------------------------------------
--- params
--------------------------------------------------------------------------------
-
-{-
--- easy
-boardNi, boardNj, nbMines :: Int
-boardNi = 9
-boardNj = 9
-nbMines = 10
--}
-
--- hard
-boardNi, boardNj, nbMines :: Int
-boardNi = 16
-boardNj = 30
-nbMines = 99
-
-boardSize :: Sz Ix2
-boardSize = Sz2 boardNi boardNj
 
 -------------------------------------------------------------------------------
 -- types
@@ -74,6 +52,8 @@ data Game = Game
   , _gStatus      :: Status
   , _gFlags       :: Int
   , _gRemCells    :: Int
+  , _gBoardNiNj   :: (Int, Int)
+  , _gNbMines     :: Int
   } deriving (Eq)
 
 makeLenses ''Game
@@ -82,13 +62,13 @@ makeLenses ''Game
 -- export
 -------------------------------------------------------------------------------
 
-mkGame :: (StatefulGen g m, PrimMonad m) => g -> m Game
-mkGame gen = do
-  mines <- mkMines gen
+mkGame :: (StatefulGen g m, PrimMonad m) => (Int, Int, Int) -> g -> m Game
+mkGame (ni, nj, nbMines) gen = do
+  mines <- mkMines (ni, nj, nbMines) gen
   let neighbors = computeNeighbors mines
-      cells = A.replicate (ParOn []) boardSize CellUnknown
-      remainingCells = boardNi * boardNj - nbMines
-      game = Game mines neighbors cells StatusRunning 0 remainingCells
+      cells = A.replicate (ParOn []) (Sz2 ni nj) CellUnknown
+      remainingCells = ni * nj - nbMines
+      game = Game mines neighbors cells StatusRunning 0 remainingCells (ni, nj) nbMines
   pure game
 
 forGame :: (Monad m) => Game -> (Int -> Int -> Cell -> m ()) -> m ()
@@ -102,17 +82,14 @@ play (MoveFree i j) = execStateT (playFree i j)
 -- internal
 -------------------------------------------------------------------------------
 
-isValidIJ :: Ix2 -> Bool
-isValidIJ (Ix2 i j) = i>=0 && i<boardNi && j>=0 && j<boardNj
-
 -- create random mines, using rejection sampling
-mkMines :: (StatefulGen g m, PrimMonad m) => g -> m (Array U Ix2 Bool)
-mkMines gen = do
-  arr <- newMArray boardSize False
+mkMines :: (StatefulGen g m, PrimMonad m) => (Int, Int, Int) -> g -> m (Array U Ix2 Bool)
+mkMines (ni, nj, nbMines) gen = do
+  arr <- newMArray (Sz2 ni nj) False
   let go 0 = pure ()
       go n = do
-        ij <- Ix2 <$> uniformRM (0, boardNi-1) gen 
-                  <*> uniformRM (0, boardNj-1) gen
+        ij <- Ix2 <$> uniformRM (0, ni-1) gen 
+                  <*> uniformRM (0, nj-1) gen
         c <- A.read arr ij
         case c of
           Just False -> write_ arr ij True >> go (n-1)
@@ -149,11 +126,12 @@ playFree :: (MonadState Game m, PrimMonad m) => Int -> Int -> m ()
 playFree i j = do
   status <- use gStatus
   let ij = Ix2 i j
-  when (status == StatusRunning && isValidIJ ij) $ do
-    m <- (! ij) <$> use gMines 
-    if m
-      then playFreeKo ij
-      else playFreeOk ij
+  when (status == StatusRunning) $ do
+    m <- (`index` ij) <$> use gMines 
+    case m of
+      Just True -> playFreeKo ij
+      Just False ->  playFreeOk ij
+      Nothing -> pure ()
 
 playFreeKo :: (MonadState Game m, PrimMonad m) => Ix2 -> m ()
 playFreeKo ij = do
@@ -187,6 +165,7 @@ playFreeOk ij = do
 discoverCells :: (MonadState Game m, PrimMonad m) => Ix2 -> m ()
 discoverCells ij0' = do
   cells <- thawS @B @Ix2 @Cell =<< use gCells
+  (ni, nj) <- use gBoardNiNj
 
   let
     go [] = pure ()
@@ -207,8 +186,11 @@ discoverCells ij0' = do
                 else do
                   -- no neighboring mine -> try neighboring cells
                   let (Ix2 i0 j0) = ij0
-                      newIjs = [ ij | i<-[i0-1 .. i0+1], j<-[j0-1 .. j0+1]
-                               , let ij = Ix2 i j , ij/=ij0, isValidIJ ij ]
+                      newIjs = [ Ix2 i j 
+                               | i<-[i0-1 .. i0+1], j<-[j0-1 .. j0+1]
+                               , i/=i0 || j/=j0   -- not the same ij
+                               , i>=0 && i<ni, j>=0 && j<nj   -- not outside
+                               ]
                   go (newIjs ++ ijs)
 
   go [ij0']

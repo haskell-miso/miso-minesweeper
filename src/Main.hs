@@ -3,6 +3,7 @@ import Control.Monad.IO.Class (liftIO)
 import Miso
 import System.Random (getStdGen)
 
+import Helpers
 import Model
 import Update
 import View
@@ -10,7 +11,7 @@ import View
 main :: IO ()
 main = run $ do
   gen <- getStdGen
-  model <- liftIO (mkModel gen)
+  model <- liftIO (mkModel ModeBeginner gen)
   startComponent 
     (component model updateModel viewModel) 
       { events = defaultEvents <> pointerEvents

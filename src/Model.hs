@@ -7,6 +7,7 @@ import Miso.Lens.TH
 import System.Random.Stateful
 
 import Game
+import Helpers
 
 data Model = Model
   { _mGame :: Game
@@ -15,12 +16,11 @@ data Model = Model
 
 makeLenses ''Model
 
-mkModel :: (PrimMonad m) => StdGen -> m Model
-mkModel gen0 = do
-  (game, gen) <- runStateGenT gen0 mkGame
+mkModel :: (PrimMonad m) => Mode -> StdGen -> m Model
+mkModel mode gen0 = do
+  (game, gen) <- runStateGenT gen0 (mkGame $ mode2infos mode)
   pure (Model game gen)
 
-resetModel :: (PrimMonad m) => Model -> m Model
-resetModel = mkModel . _mGen
-
+resetModel :: (PrimMonad m) => Mode -> Model -> m Model
+resetModel mode = mkModel mode . _mGen
 

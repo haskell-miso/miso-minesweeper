@@ -18,14 +18,8 @@ import Update
 -- params
 -------------------------------------------------------------------------------
 
-canvasWidth, canvasHeight :: Int
-canvasWidth = boardNj * cellSize
-canvasHeight = boardNi * cellSize
-
-cellSizeD, canvasWidthD, canvasHeightD :: Double
+cellSizeD :: Double
 cellSizeD = fromIntegral cellSize
-canvasWidthD = fromIntegral canvasWidth
-canvasHeightD = fromIntegral canvasHeight
 
 cs007, cs01, cs02, cs03, cs04, cs05, cs06, cs07, cs08, cs09 :: Double
 cs007 = cellSizeD * 0.07
@@ -46,9 +40,14 @@ cs09 = cellSizeD * 0.9
 viewModel :: Model -> View Action
 viewModel model = div_ [] 
   [ h1_ [] [ "miso-minesweeper" ]
+  , p_ [] 
+      [ button_ [ onClick (ActionAskReset ModeBeginner) ]     [ "beginner" ]
+      , button_ [ onClick (ActionAskReset ModeIntermediate) ] [ "intermediate" ]
+      , button_ [ onClick (ActionAskReset ModeExpert) ]       [ "expert" ]
+      ]
   , Canvas.canvas 
-      [ width_ (ms canvasWidth)
-      , height_ (ms canvasHeight)
+      [ width_ (ms $ nj * cellSize)
+      , height_ (ms $ ni * cellSize)
       , Style.style_  [Style.border "2px solid black"]
       , onPointerUp ActionAskPlay
       ]
@@ -60,17 +59,14 @@ viewModel model = div_ []
         , br_ []
         , text ("flags: " <> ms (show $ model ^. mGame ^. gFlags))
         , br_ []
-        , text ("mines: " <> ms (show nbMines))
+        , text ("mines: " <> ms (show $ model ^. mGame ^. gNbMines))
         , br_ []
         , text ("remaining cells: " <> ms (show $ model ^. mGame ^. gRemCells))
         ]
-  , p_ [] 
-      [ button_ 
-        [ onClick ActionAskReset ]
-        [ text "reset" ]
-      ]
   ]
   where
+    (ni, nj) = model ^. mGame ^. gBoardNiNj
+
     fmtStatus = \case
       StatusRunning   -> "running"
       StatusWon       -> "won"
@@ -85,34 +81,37 @@ initCanvas _ = pure ()
 
 drawCanvas :: Model -> () -> Canvas ()
 drawCanvas model () = do
-  clearRect (0, 0, canvasWidthD, canvasHeightD)
+  let (ni, nj) = model ^. mGame ^. gBoardNiNj
+      w = fromIntegral $ nj * cellSize
+      h = fromIntegral $ ni * cellSize
+  clearRect (0, 0, w, h)
   font cellFont
-  drawBackground
+  drawBackground w h
   forGame (model ^. mGame) drawGameCell
-  drawGrid
+  drawGrid ni nj w h
 
 -------------------------------------------------------------------------------
 -- drawing functions
 -------------------------------------------------------------------------------
 
-drawGrid :: Canvas ()
-drawGrid = do
+drawGrid :: Int -> Int -> Double -> Double -> Canvas ()
+drawGrid ni nj w h = do
   fillStyle (color Style.black)
   beginPath ()
-  forM_ [1 .. boardNj-1] $ \j -> do
+  forM_ [1 .. nj-1] $ \j -> do
     let x = fromIntegral (j * cellSize)
     moveTo (x, 0)
-    lineTo (x, canvasHeightD)
-  forM_ [1 .. boardNi-1] $ \i -> do
+    lineTo (x, h)
+  forM_ [1 .. ni-1] $ \i -> do
     let y = fromIntegral (i * cellSize)
     moveTo (0, y)
-    lineTo (canvasWidthD, y)
+    lineTo (w, y)
   stroke ()
 
-drawBackground :: Canvas ()
-drawBackground = do
+drawBackground :: Double -> Double -> Canvas ()
+drawBackground w h = do
   fillStyle (color colorNo)
-  fillRect (0, 0, canvasWidthD, canvasHeightD)
+  fillRect (0, 0, w, h)
 
 drawCell :: Style.Color -> Canvas ()
 drawCell c = do

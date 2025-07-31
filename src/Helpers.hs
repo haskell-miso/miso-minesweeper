@@ -32,3 +32,14 @@ ij2xy i j = (fromIntegral (j*cellSize), fromIntegral (i*cellSize))
 xy2ij :: Double -> Double -> (Int, Int)
 xy2ij x y = (floor y `div` cellSize, floor x `div` cellSize)
 
+data Mode
+  = ModeBeginner
+  | ModeIntermediate
+  | ModeExpert
+
+mode2infos :: Mode -> (Int, Int, Int)
+mode2infos = \case
+  ModeBeginner      -> (9, 9, 10)
+  ModeIntermediate  -> (16, 16, 40)
+  ModeExpert        -> (16, 30, 99)
+

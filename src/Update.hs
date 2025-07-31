@@ -16,7 +16,7 @@ import Model
 -------------------------------------------------------------------------------
 
 data Action 
-  = ActionAskReset
+  = ActionAskReset Mode
   | ActionAskPlay PointerEvent
   | ActionSetModel Model
   | ActionSetGame Game
@@ -27,9 +27,9 @@ data Action
 
 updateModel :: Action -> Effect Model Action
 
-updateModel ActionAskReset = do
+updateModel (ActionAskReset mode) = do
   model <- get
-  io (ActionSetModel <$> liftIO (resetModel model))
+  io (ActionSetModel <$> liftIO (resetModel mode model))
 
 updateModel (ActionSetModel model) = 
   put model
