@@ -55,8 +55,15 @@ viewModel model = div_ []
     initCanvas
     (drawCanvas model)
   , p_ [] [ "left-click to discover, middle-click to flag/unflag" ]
-  , p_ [] [ text ("status: " <> fmtStatus (model ^. mGame ^. gStatus)) ]
-  , p_ [] [ text ("remaining: " <> (ms $ show $ model ^. mGame ^. gRemaining)) ]
+  , p_ [] 
+        [ text ("status: " <> fmtStatus (model ^. mGame ^. gStatus))
+        , br_ []
+        , text ("flags: " <> ms (show $ model ^. mGame ^. gFlags))
+        , br_ []
+        , text ("mines: " <> ms (show nbMines))
+        , br_ []
+        , text ("remaining cells: " <> ms (show $ model ^. mGame ^. gRemCells))
+        ]
   , p_ [] 
       [ button_ 
         [ onClick ActionAskReset ]

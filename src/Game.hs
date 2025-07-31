@@ -8,9 +8,11 @@ module Game
   , boardNi
   , boardNj
   , forGame
-  , gRemaining
+  , gFlags
+  , gRemCells
   , gStatus
   , mkGame
+  , nbMines
   , play
   ) where
 
@@ -26,15 +28,22 @@ import System.Random.Stateful (uniformRM, StatefulGen)
 -- params
 -------------------------------------------------------------------------------
 
-boardNi, boardNj :: Int
+-- easy
+boardNi, boardNj, nbMines :: Int
+boardNi = 9
+boardNj = 9
+nbMines = 10
+
+{-
+-- hard
+boardNi, boardNj, nbMines :: Int
 boardNi = 16
 boardNj = 30
+nbMines = 99
+-}
 
 boardSize :: Sz Ix2
 boardSize = Sz2 boardNi boardNj
-
-nbMines :: Int
-nbMines = 99
 
 -------------------------------------------------------------------------------
 -- types
@@ -64,7 +73,8 @@ data Game = Game
   , _gNeighbors   :: Array P Ix2 Int
   , _gCells       :: Array B Ix2 Cell
   , _gStatus      :: Status
-  , _gRemaining   :: Int
+  , _gFlags       :: Int
+  , _gRemCells    :: Int
   } deriving (Eq)
 
 makeLenses ''Game
@@ -78,7 +88,8 @@ mkGame gen = do
   mines <- mkMines gen
   let neighbors = computeNeighbors mines
       cells = A.replicate (ParOn []) boardSize CellUnknown
-      game = Game mines neighbors cells StatusRunning nbMines
+      remainingCells = boardNi * boardNj - nbMines
+      game = Game mines neighbors cells StatusRunning 0 remainingCells
   pure game
 
 forGame :: (Monad m) => Game -> (Int -> Int -> Cell -> m ()) -> m ()
@@ -120,15 +131,9 @@ computeNeighbors mines =
       f(w ( 1 :. -1)) + f(w ( 1 :. 0)) + f(w ( 1 :. 1)) 
   in compute $ mapStencil (Fill False) count3x3Stencil mines
 
-updateCellsLost :: Game -> Array D Ix2 Cell   -- TODO
-updateCellsLost game = A.zipWith f (game ^. gMines) (game ^. gNeighbors)
-  where
-    f mine cell = case (mine, cell) of
-      (True, _) -> CellMine
-      (_, x) -> CellFree x
-
+-- TODO implement playFlag
 playFlag :: (MonadState Game m, PrimMonad m) => Int -> Int -> m ()
-playFlag i j = pure ()    -- TODO
+playFlag i j = pure ()
 
 playFree :: (MonadState Game m, PrimMonad m) => Int -> Int -> m ()
 playFree i j = do
@@ -136,13 +141,40 @@ playFree i j = do
   when (status == StatusRunning && isValidIJ i j) $ do
     let ij = Ix2 i j
     m <- (! ij) <$> use gMines 
-    n <- (! ij) <$> use gNeighbors 
-    cells0 <- use gCells
-    cells0M <- thawS @B @Ix2 @Cell cells0
     if m
-      then do
-        write_ cells0M (Ix2 i j) CellMine
-        gStatus .= StatusLost
-      else write_ cells0M (Ix2 i j) (CellFree n)
-    freezeS cells0M >>= assign gCells
+      then playFreeKo ij
+      else playFreeOk ij
+
+playFreeKo :: (MonadState Game m, PrimMonad m) => Ix2 -> m ()
+playFreeKo ij = do
+  -- update cells
+  cells <- thawS @B @Ix2 @Cell =<< use gCells
+  write_ cells ij CellMineKo
+  freezeS cells >>= assign gCells
+  -- show mines and flags in cells
+  mines <- use gMines
+  gCells %= compute . A.zipWith upCell mines
+  -- update status
+  gStatus .= StatusLost
+  where
+    upCell False CellFlag = CellFlagKo
+    upCell True CellUnknown = CellMine
+    upCell _ c = c
+
+playFreeOk :: (MonadState Game m, PrimMonad m) => Ix2 -> m ()
+playFreeOk ij = do
+  -- update cells
+  n <- (! ij) <$> use gNeighbors 
+  cells <- thawS @B @Ix2 @Cell =<< use gCells
+  write_ cells ij (CellFree n)
+  freezeS cells >>= assign gCells
+  gRemCells -= 1
+  -- TODO discover free cells 0
+  -- check win
+  rc <- use gRemCells
+  when (rc == 0) $ do
+    -- show flags in cells
+    gCells %= compute . A.map (\c -> if c == CellUnknown then CellFlag else c)
+    -- update status
+    gStatus .= StatusWon
 
