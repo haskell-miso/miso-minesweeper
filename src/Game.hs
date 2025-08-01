@@ -125,13 +125,15 @@ playFlag i j = do
 playFree :: (MonadState Game m, PrimMonad m) => Int -> Int -> m ()
 playFree i j = do
   status <- use gStatus
-  let ij = Ix2 i j
   when (status == StatusRunning) $ do
-    m <- (`index` ij) <$> use gMines 
-    case m of
-      Just True -> playFreeKo ij
-      Just False ->  playFreeOk ij
-      Nothing -> pure ()
+    let ij = Ix2 i j
+    c <- (`index` ij) <$> use gCells 
+    when (c /= Just CellFlag) $ do
+      m <- (`index` ij) <$> use gMines 
+      case m of
+        Just True -> playFreeKo ij
+        Just False ->  playFreeOk ij
+        Nothing -> pure ()
 
 playFreeKo :: (MonadState Game m, PrimMonad m) => Ix2 -> m ()
 playFreeKo ij = do
@@ -166,23 +168,24 @@ discoverCells :: (MonadState Game m, PrimMonad m) => Ix2 -> m ()
 discoverCells ij0' = do
   cells <- thawS @B @Ix2 @Cell =<< use gCells
   (ni, nj) <- use gBoardNiNj
+  neighbors <- use gNeighbors
 
   let
-    go [] = pure ()
-    go (ij0:ijs) = do
+    discover [] = pure ()
+    discover (ij0:ijs) = do
       mc0 <- A.read cells ij0
       case mc0 of
-        Nothing -> go ijs
+        Nothing -> discover ijs
         Just c0 -> 
           if c0 /= CellUnknown
-            then go ijs
+            then discover ijs
             else do
               -- unknown cell -> discover
-              n <- (! ij0) <$> use gNeighbors 
+              let n = neighbors ! ij0
               write_ cells ij0 (CellFree n)
               gRemCells -= 1
               if n > 0
-                then go ijs
+                then discover ijs
                 else do
                   -- no neighboring mine -> try neighboring cells
                   let (Ix2 i0 j0) = ij0
@@ -191,9 +194,9 @@ discoverCells ij0' = do
                                , i/=i0 || j/=j0   -- not the same ij
                                , i>=0 && i<ni, j>=0 && j<nj   -- not outside
                                ]
-                  go (newIjs ++ ijs)
+                  discover (newIjs ++ ijs)
 
-  go [ij0']
+  discover [ij0']
 
   freezeS cells >>= assign gCells
 

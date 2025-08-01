@@ -17,9 +17,7 @@ data Model = Model
 makeLenses ''Model
 
 mkModel :: (PrimMonad m) => Mode -> StdGen -> m Model
-mkModel mode gen0 = do
-  (game, gen) <- runStateGenT gen0 (mkGame $ mode2infos mode)
-  pure (Model game gen)
+mkModel mode gen0 = uncurry Model <$> runStateGenT gen0 (mkGame $ mode2infos mode)
 
 resetModel :: (PrimMonad m) => Mode -> Model -> m Model
 resetModel mode = mkModel mode . _mGen
