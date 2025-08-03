@@ -1,3 +1,4 @@
+module Maine (main) where
 
 import Control.Monad.IO.Class (liftIO)
 import Miso
@@ -12,7 +13,7 @@ main :: IO ()
 main = run $ do
   gen <- getStdGen
   model <- liftIO (mkModel ModeBeginner gen)
-  startComponent 
+  startApp
     (component model updateModel viewModel) 
       { events = defaultEvents <> pointerEvents
       -- , logLevel = DebugAll

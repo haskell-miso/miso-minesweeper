@@ -36,4 +36,3 @@ executable app
     GHC2024
   default-extensions:
     CPP TemplateHaskell
- 

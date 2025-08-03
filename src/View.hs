@@ -37,7 +37,7 @@ cs09 = cellSizeD * 0.9
 -- view
 -------------------------------------------------------------------------------
 
-viewModel :: Model -> View Action
+viewModel :: Model -> View Model Action
 viewModel model = div_ [] 
   [ h1_ [] [ "miso-minesweeper" ]
   , p_ [] 
