@@ -3,7 +3,7 @@
 module Helpers where
 
 import Miso.String (MisoString)
-import Miso.Style qualified as Style
+import Miso.CSS qualified as Style
 
 cellSize :: Int
 cellSize = 25

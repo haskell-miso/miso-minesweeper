@@ -1,4 +1,3 @@
-
 module Game
   ( Cell(..)
   , Game

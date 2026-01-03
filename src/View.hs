@@ -4,10 +4,12 @@ module View where
 
 import Control.Monad (forM_, when)
 import Miso
+import Miso.Html
+import Miso.Html.Property
 import Miso.Canvas as Canvas
 import Miso.Lens
 import Miso.String (ms)
-import Miso.Style qualified as Style
+import Miso.CSS qualified as Style
 
 import Game
 import Helpers
