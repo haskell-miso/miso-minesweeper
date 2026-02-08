@@ -13,11 +13,9 @@ main :: IO ()
 main = do
   gen <- getStdGen
   model <- liftIO (mkModel ModeBeginner gen)
-  startApp
+  startApp 
+    (defaultEvents <> pointerEvents)
     (component model updateModel viewModel) 
-      { events = defaultEvents <> pointerEvents
-      -- , logLevel = DebugAll
-      }
 
 #ifdef WASM
 foreign export javascript "hs_start" main :: IO ()
