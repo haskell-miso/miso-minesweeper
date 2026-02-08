@@ -10,7 +10,7 @@ import Update
 import View
 
 main :: IO ()
-main = run $ do
+main = do
   gen <- getStdGen
   model <- liftIO (mkModel ModeBeginner gen)
   startApp
