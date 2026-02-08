@@ -25,7 +25,7 @@ data Action
 -- update
 -------------------------------------------------------------------------------
 
-updateModel :: Action -> Transition Model Action
+updateModel :: Action -> Effect parent Model Action
 
 updateModel (ActionAskReset mode) = do
   model <- get
