@@ -40,7 +40,7 @@ cs09 = cellSizeD * 0.9
 -------------------------------------------------------------------------------
 
 viewModel :: Model -> View Model Action
-viewModel model = div_ [] 
+viewModel model = vfrag
   [ h1_ [] [ "miso-minesweeper" ]
   , p_ [] 
       [ button_ [ onClick (ActionAskReset ModeBeginner) ]     [ "beginner" ]
