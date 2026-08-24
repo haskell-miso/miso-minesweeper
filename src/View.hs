@@ -5,6 +5,8 @@ module View where
 
 import Control.Monad (forM_, when)
 import Miso
+import Miso.Html
+import Miso.Html.Property
 import Miso.Canvas as Canvas
 import Miso.Html.Element (a_, button_, code_, div_, footer_, h1_, header_, main_, p_, span_)
 import Miso.Html.Event (onClick, onContextMenuWithOptions)
