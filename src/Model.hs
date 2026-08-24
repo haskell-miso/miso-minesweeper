@@ -1,8 +1,6 @@
-
 module Model where
 
 import Control.Monad.Primitive
-import Miso.Lens
 import Miso.Lens.TH
 import System.Random.Stateful
 
@@ -12,13 +10,16 @@ import Helpers
 data Model = Model
   { _mGame :: Game
   , _mGen :: StdGen
+  , _mMode :: Mode
+  , _mFlagMode :: Bool
   } deriving (Eq)
 
 makeLenses ''Model
 
 mkModel :: (PrimMonad m) => Mode -> StdGen -> m Model
-mkModel mode gen0 = uncurry Model <$> runStateGenT gen0 (mkGame $ mode2infos mode)
+mkModel mode gen0 = do
+  (game, gen) <- runStateGenT gen0 (mkGame $ mode2infos mode)
+  pure (Model game gen mode False)
 
 resetModel :: (PrimMonad m) => Mode -> Model -> m Model
 resetModel mode = mkModel mode . _mGen
-

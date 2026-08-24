@@ -1,13 +1,157 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title> miso-minesweeper </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>miso-minesweeper — Minesweeper in Haskell</title>
+    <meta name="description" content="Classic minesweeper written in Haskell and compiled to WebAssembly with the miso framework, rendered on an HTML5 canvas. Three difficulty levels, flag mode for touch screens.">
+    <link rel="canonical" href="https://minesweeper.haskell-miso.org/">
+    <meta name="theme-color" content="#14181f">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://minesweeper.haskell-miso.org/">
+    <meta property="og:title" content="miso-minesweeper — Minesweeper in Haskell">
+    <meta property="og:description" content="Classic minesweeper written in Haskell, compiled to WebAssembly with miso and drawn on a 2D canvas.">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="miso-minesweeper — Minesweeper in Haskell">
+    <meta name="twitter:description" content="Classic minesweeper written in Haskell, compiled to WebAssembly with miso.">
+    <link rel="icon" href="favicon.ico">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "VideoGame",
+      "name": "miso-minesweeper",
+      "url": "https://minesweeper.haskell-miso.org/",
+      "gamePlatform": "Web",
+      "description": "Classic minesweeper written in Haskell and compiled to WebAssembly with the miso framework.",
+      "codeRepository": "https://github.com/haskell-miso/miso-minesweeper"
+    }
+    </script>
+    <style>
+      :root {
+        --bg: #14181f;
+        --panel: #1d232d;
+        --panel-edge: #303947;
+        --text: #e9edf3;
+        --muted: #97a2b3;
+        --accent: #e4574f;
+        --accent-2: #6cb6ff;
+        color-scheme: dark;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+      .app { max-width: 1040px; margin: 0 auto; padding: 1.25rem; }
+      .hero { text-align: center; padding: 2.25rem 0 1.5rem; }
+      .hero h1 { margin: 0 0 .5rem; font-size: clamp(1.9rem, 5vw, 2.8rem); letter-spacing: -.02em; }
+      .hero h1 a { color: var(--text); text-decoration: none; }
+      .hero h1 a:hover { color: var(--accent); }
+      .tagline { margin: 0 auto 1.1rem; max-width: 44rem; color: var(--muted); font-size: 1.05rem; }
+      .gh {
+        display: inline-block;
+        padding: .5rem 1.1rem;
+        border: 1px solid var(--panel-edge);
+        border-radius: 999px;
+        background: var(--panel);
+        color: var(--text);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: .92rem;
+        transition: border-color .15s ease, transform .15s ease;
+      }
+      .gh:hover { border-color: var(--accent); transform: translateY(-1px); }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--panel-edge);
+        border-radius: 16px;
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: .9rem;
+      }
+      .modes, .hud { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: center; }
+      .chip {
+        padding: .4rem 1rem;
+        border-radius: 999px;
+        border: 1px solid var(--panel-edge);
+        background: var(--bg);
+        color: var(--muted);
+        font-size: .9rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .chip:hover { border-color: var(--accent); color: var(--text); }
+      .chip.active { background: var(--accent); border-color: var(--accent); color: #1d0f0e; }
+      .stat {
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 1rem;
+        color: var(--text);
+        background: var(--bg);
+        border: 1px solid var(--panel-edge);
+        border-radius: 10px;
+        padding: .4rem .8rem;
+      }
+      .face {
+        font-size: 1.6rem;
+        line-height: 1;
+        padding: .35rem .55rem;
+        border-radius: 12px;
+        border: 1px solid var(--panel-edge);
+        background: var(--bg);
+        cursor: pointer;
+        transition: transform .1s ease;
+      }
+      .face:hover { transform: scale(1.08); }
+      .board-wrap { max-width: 100%; overflow-x: auto; border-radius: 12px; }
+      .board {
+        display: block;
+        border-radius: 12px;
+        border: 1px solid var(--panel-edge);
+        max-width: 100%;
+        height: auto;
+        touch-action: manipulation;
+      }
+      .status { margin: 0; color: var(--muted); font-size: .95rem; }
+      .foot { text-align: center; color: var(--muted); font-size: .9rem; padding: 2rem 0 1rem; }
+      .foot a { color: var(--accent); text-decoration: none; }
+      .foot a:hover { text-decoration: underline; }
+      .foot code {
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: .85em;
+        background: var(--panel);
+        border-radius: 6px;
+        padding: .1em .35em;
+      }
+      body:has(> .app) .boot, body:has(> .stage) .boot { display: none; }
+      .boot {
+        min-height: 100vh;
+        display: flex; flex-direction: column; gap: 1rem;
+        align-items: center; justify-content: center;
+        color: var(--muted);
+      }
+      .boot .spin {
+        width: 42px; height: 42px;
+        border-radius: 50%;
+        border: 3px solid var(--panel-edge);
+        border-top-color: var(--accent);
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      @media (max-width: 560px) { .app { padding: .9rem; } }
+    </style>
   </head>
   <body>
+    <div class="boot">
+      <div class="spin" aria-hidden="true"></div>
+      <p>Loading Haskell WebAssembly&hellip;</p>
+      <noscript>miso-minesweeper is a WebAssembly game and needs JavaScript enabled.</noscript>
+    </div>
     <script src="index.js" type="module"></script>
   </body>
 </html>
-

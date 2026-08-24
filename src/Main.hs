@@ -1,6 +1,7 @@
-module Maine (main) where
+{-# LANGUAGE CPP #-}
 
-import Control.Monad.IO.Class (liftIO)
+module Main (main) where
+
 import Miso
 import System.Random (getStdGen)
 
@@ -10,16 +11,11 @@ import Update
 import View
 
 main :: IO ()
-main = run $ do
+main = do
   gen <- getStdGen
-  model <- liftIO (mkModel ModeBeginner gen)
-  startApp
-    (component model updateModel viewModel) 
-      { events = defaultEvents <> pointerEvents
-      -- , logLevel = DebugAll
-      }
+  model <- mkModel ModeBeginner gen
+  startApp (defaultEvents <> pointerEvents) (component model updateModel viewModel)
 
 #ifdef WASM
 foreign export javascript "hs_start" main :: IO ()
 #endif
-
